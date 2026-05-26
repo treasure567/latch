@@ -1,0 +1,76 @@
+import { SectionMarker } from "@/components/ui/section-marker";
+import { QVAC_MARKER, QVAC_ROWS } from "@/lib/content";
+import { layout, surface, type } from "@/lib/tokens";
+import type { CSSProperties } from "react";
+
+export function QvacMatrix() {
+  return (
+    <section
+      id="stack"
+      className={`relative w-full ${layout.container} ${layout.sectionX} ${layout.sectionYTight}`}
+    >
+      <div
+        data-scroll-reveal="section"
+        className="grid lg:grid-cols-12 gap-10 lg:gap-16 mb-12"
+      >
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          <SectionMarker num={QVAC_MARKER.num} label={QVAC_MARKER.label} />
+          <h2 className={type.h2}>
+            Four contracts.
+            <br />
+            No admin key.
+          </h2>
+        </div>
+        <div className="lg:col-span-7 flex items-end">
+          <p className={`${type.body} max-w-[520px]`}>
+            One onchain guarantee, surrounded by the pieces that make it usable:
+            a registry buyers read, a one-transaction launcher, and a
+            fixed-supply token template. Built on{" "}
+            <code className="font-mono text-white/85">v4-core</code> with
+            NatSpec on every function, Foundry tests, and no admin key to
+            override the lock.
+          </p>
+        </div>
+      </div>
+
+      <div className="border border-white/[0.07] rounded-2xl overflow-hidden">
+        <ul className="divide-y divide-white/[0.06]">
+          {QVAC_ROWS.map((r, i) => {
+            const Icon = r.icon;
+            const reserved = r.status === "reserved";
+            return (
+              <li
+                key={r.module}
+                data-scroll-reveal="surface"
+                style={{ "--scroll-delay": `${i * 45}ms` } as CSSProperties}
+                className={`grid grid-cols-1 lg:grid-cols-12 items-start lg:items-center gap-3 lg:gap-6 px-6 py-5 transition-colors ${
+                  reserved
+                    ? "opacity-55 hover:opacity-75"
+                    : "hover:bg-white/[0.015]"
+                }`}
+              >
+                <div className="flex items-center gap-3 lg:col-span-4">
+                  <span className={surface.iconBox}>
+                    <Icon size={16} className="text-white" />
+                  </span>
+                  <span className="font-mono text-[12.5px] text-white/85">
+                    {r.module}
+                  </span>
+                  {reserved && (
+                    <span className="ml-1 inline-flex items-center rounded-full border border-white/15 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-white/55">
+                      Queued
+                    </span>
+                  )}
+                </div>
+                <p className={`${type.bodySm} lg:col-span-6`}>{r.use}</p>
+                <code className="text-[11px] text-white/35 font-mono lg:col-span-2 lg:text-right">
+                  {r.path}
+                </code>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
