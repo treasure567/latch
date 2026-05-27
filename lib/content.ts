@@ -21,7 +21,6 @@ import {
   Shield,
   View,
   Wallet,
-  X,
   type Icon,
 } from "@/lib/icons";
 
@@ -51,16 +50,16 @@ export const NAV_LINKS = [
 
 export const ACTIONS = {
   primary: {
+    label: "Try the playground",
+    sub: "See a rug get blocked",
+    href: "#playground",
+    glyph: Flash as Icon,
+  },
+  secondary: {
     label: "View on GitHub",
     sub: "Open source · Foundry",
     href: BRAND.github,
     glyph: Github as Icon,
-  },
-  secondary: {
-    label: "Follow on X",
-    sub: "Build log",
-    href: BRAND.x,
-    glyph: X as Icon,
   },
 } as const;
 
