@@ -3,14 +3,17 @@
   "theme": "mint",
   "name": "Latch",
   "colors": {
-    "primary": "#10B981",
-    "light": "#34D399",
-    "dark": "#059669"
+    "primary": "#FFFFFF",
+    "light": "#FFFFFF",
+    "dark": "#0A0A0A"
+  },
+  "appearance": {
+    "default": "dark"
   },
   "background": {
     "colors": {
-      "light": "#F6FBF9",
-      "dark": "#0A0A0A"
+      "light": "#FAFAFA",
+      "dark": "#030303"
     }
   },
   "fonts": {
