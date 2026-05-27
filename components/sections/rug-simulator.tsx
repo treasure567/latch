@@ -1,48 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SectionMarker } from "@/components/ui/section-marker";
-import { Cancel, Tick, ShieldStrong, Refresh, Flash, Layers } from "@/lib/icons";
+import { Cancel, Tick, ShieldStrong, Refresh, Activity } from "@/lib/icons";
 import { cn } from "@/lib/cn";
 import { layout, type, surface } from "@/lib/tokens";
 import {
-  DEMO_SCHEDULE,
-  TIMELINE_END,
-  releasedAmount,
-  attemptRemove,
-  stepBoundaries,
-  stateNote,
-  type RemoveOutcome,
-} from "@/lib/sim";
+  initLaunch,
+  tick,
+  rugWithoutLatch,
+  marketCap,
+  changePct,
+  type Launch,
+} from "@/lib/launch-sim";
 
-const s = DEMO_SCHEDULE;
+type RugEvent = "blocked" | "crashed" | null;
+
+function fmtOkb(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  if (n >= 10) return n.toFixed(0);
+  if (n >= 1) return n.toFixed(1);
+  return n.toPrecision(2);
+}
 
 export function RugSimulator() {
-  const [day, setDay] = useState(2);
-  const [amount, setAmount] = useState(50);
-  const [removed, setRemoved] = useState(0);
-  const [last, setLast] = useState<RemoveOutcome | null>(null);
+  const [launch, setLaunch] = useState<Launch>(initLaunch);
+  const [event, setEvent] = useState<RugEvent>(null);
   const [shake, setShake] = useState(0);
 
-  const released = releasedAmount(s, day);
-  const withdrawable = Math.max(0, released - removed);
-  const locked = 100 - released;
-  const boundaries = stepBoundaries(s);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLaunch((l) => (l.status === "live" ? tick(l) : l));
+    }, 750);
+    return () => clearInterval(id);
+  }, []);
+
+  const rugged = launch.status === "rugged";
+  const mc = marketCap(launch);
+  const chg = changePct(launch);
+
+  const hist = launch.history;
+  const min = Math.min(...hist);
+  const max = Math.max(...hist);
+  const span = max - min || 1;
+  const coords = hist.map((p, i) => {
+    const x = hist.length === 1 ? 0 : (i / (hist.length - 1)) * 100;
+    const y = 38 - ((p - min) / span) * 34;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  const linePts = coords.join(" ");
+  const areaPts = `0,40 ${linePts} 100,40`;
+  const stroke = rugged ? "#fb7185" : "#34d399";
 
   function tryRug() {
-    const outcome = attemptRemove(s, removed, amount, day);
-    setLast(outcome);
-    if (outcome.kind === "released") setRemoved(outcome.removedSoFar);
-    else setShake((n) => n + 1);
+    setEvent("blocked");
+  }
+  function rugWithout() {
+    setLaunch((l) => rugWithoutLatch(l));
+    setEvent("crashed");
+    setShake((n) => n + 1);
+  }
+  function reset() {
+    setLaunch(initLaunch());
+    setEvent(null);
   }
 
-  function reset() {
-    setDay(2);
-    setAmount(50);
-    setRemoved(0);
-    setLast(null);
-  }
+  const stats = [
+    { label: "Market cap", value: `${fmtOkb(mc)} OKB`, big: true },
+    { label: "24h", value: `${chg >= 0 ? "+" : ""}${chg.toFixed(0)}%`, tone: chg >= 0 && !rugged },
+    { label: "Liquidity", value: `${fmtOkb(launch.reserveOkb)} OKB`, lock: true },
+    { label: "Holders", value: launch.holders.toLocaleString() },
+    { label: "Volume", value: `${fmtOkb(launch.volume)} OKB` },
+  ];
 
   return (
     <section
@@ -54,116 +84,102 @@ export function RugSimulator() {
         <div className="flex flex-col gap-5 lg:col-span-7">
           <SectionMarker num="02" label="Hook lab" />
           <h2 className={type.h2}>
+            <span className="block">A live launch.</span>
             <span className="block">Try to rug it.</span>
-            <span className="block">Watch it revert.</span>
           </h2>
         </div>
         <div className="flex flex-col justify-end gap-3 lg:col-span-5">
           <p className={cn(type.body, "max-w-md")}>
-            A Uniswap v4 hook runs inside the pool. Move the clock, choose how much liquidity to pull,
-            and hit the pool. Latch checks the public schedule and reverts anything it has not released
-            yet. This runs the exact maths the deployed hook does.
+            A token is launching — buyers are piling in, the chart is pumping, market cap is climbing.
+            Now play the creator and try to pull the liquidity. Latch is a Uniswap v4 hook inside the
+            pool: the rug reverts onchain. Then watch the same launch without it.
           </p>
         </div>
       </div>
 
       <div className="grid gap-5 md:gap-6 lg:grid-cols-12">
-        <div className={cn("rounded-2xl lg:col-span-7", surface.panel, "p-6 md:p-8")}>
-          <div className="flex items-center justify-between">
-            <span className={type.eyebrow}>
-              <ShieldStrong size={14} /> Pool · seed liquidity
+        <div className={cn("rounded-2xl lg:col-span-8", surface.panel, "p-6 md:p-8")}>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/[0.08] bg-white/[0.04] font-mono text-[13px] text-white">
+                R
+              </span>
+              <div>
+                <p className="text-[15px] font-medium text-white">RUGME / OKB</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
+                  Latch verified pool
+                </p>
+              </div>
+            </div>
+            <span
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em]",
+                rugged
+                  ? "border-rose-500/25 bg-rose-500/[0.06] text-rose-300"
+                  : "border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-300",
+              )}
+            >
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  rugged ? "bg-rose-400" : "animate-pulse bg-emerald-400",
+                )}
+              />
+              {rugged ? "rugged" : "live"}
             </span>
-            <span className="font-mono text-[11px] tracking-wide text-white/45">day {day} of {TIMELINE_END}</span>
           </div>
 
-          <div key={shake} className={cn("mt-4", last?.kind === "blocked" && "animate-rug-shake")}>
-            <div className="flex h-12 w-full overflow-hidden rounded-xl border border-white/10 bg-black">
-              {removed > 0 ? (
-                <div
-                  className="h-full border-r border-white/10 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)]"
-                  style={{ width: `${removed}%` }}
-                />
-              ) : null}
-              {withdrawable > 0 ? (
-                <div
-                  className="h-full bg-emerald-500/30"
-                  style={{ width: `${withdrawable}%` }}
-                />
-              ) : null}
-              {locked > 0 ? (
-                <div className="h-full bg-white/[0.12]" style={{ width: `${locked}%` }} />
-              ) : null}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.18em]">
-              <span className="text-white/45">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-white/[0.12] align-middle" />
-                locked {locked.toFixed(0)}%
-              </span>
-              <span className="text-emerald-300/80">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-emerald-500/40 align-middle" />
-                withdrawable {withdrawable.toFixed(0)}%
-              </span>
-              <span className="text-white/35">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-sm border border-white/15 align-middle" />
-                removed {removed.toFixed(0)}%
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-7">
-            <div className="mb-2 flex items-center justify-between">
-              <label className={type.eyebrow}>
-                <Flash size={14} /> Clock
-              </label>
-              <span className="font-mono text-[11px] text-white/45">released {released.toFixed(0)}%</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={TIMELINE_END}
-              step={1}
-              value={day}
-              onChange={(e) => setDay(Number(e.target.value))}
-              className="w-full accent-white"
-              aria-label="Advance the clock"
-            />
-            <div className="relative mt-1 h-4">
-              {boundaries.map((b) => (
-                <span
-                  key={b.day}
-                  className="absolute -translate-x-1/2 font-mono text-[9px] text-white/30"
-                  style={{ left: `${(b.day / TIMELINE_END) * 100}%` }}
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+            {stats.map((st) => (
+              <div key={st.label}>
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/40">
+                  {st.label}
+                  {st.lock ? <span className="text-emerald-300/70"> · locked</span> : null}
+                </p>
+                <p
+                  className={cn(
+                    "mt-1 font-mono tabular-nums",
+                    st.big ? "text-2xl text-white" : "text-base",
+                    st.tone === true ? "text-emerald-300" : st.tone === false ? "text-rose-300" : "text-white/80",
+                  )}
                 >
-                  {b.releasedPct}%
-                </span>
-              ))}
-            </div>
+                  {st.value}
+                </p>
+              </div>
+            ))}
           </div>
 
-          <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between">
-              <label className={type.eyebrow}>Pull liquidity</label>
-              <span className="font-mono text-[11px] text-white/45">{amount}%</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={100}
-              step={1}
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full accent-white"
-              aria-label="Amount to remove"
-            />
+          <div key={shake} className={cn("mt-6", event === "crashed" && "animate-rug-shake")}>
+            <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-40 w-full">
+              <polygon points={areaPts} fill={stroke} fillOpacity="0.08" />
+              <polyline
+                points={linePts}
+                fill="none"
+                stroke={stroke}
+                strokeWidth="0.8"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={tryRug}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+              disabled={rugged}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-[13px] font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-30"
             >
-              Try to rug {amount}%
+              <ShieldStrong size={15} /> Creator: pull all liquidity
+            </button>
+            <button
+              type="button"
+              onClick={rugWithout}
+              disabled={rugged}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-rose-500/30 px-5 text-[13px] text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-30"
+            >
+              Replay without Latch
             </button>
             <button
               type="button"
@@ -174,101 +190,80 @@ export function RugSimulator() {
             </button>
           </div>
 
-          {last ? (
-            <div
-              className={cn(
-                "mt-5 flex items-start gap-3 rounded-xl border p-4",
-                last.kind === "blocked"
-                  ? "border-rose-500/25 bg-rose-500/[0.06]"
-                  : "border-emerald-500/25 bg-emerald-500/[0.06]",
-              )}
-            >
-              <span
-                className={cn(
-                  "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-                  last.kind === "blocked" ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300",
-                )}
-              >
-                {last.kind === "blocked" ? <Cancel size={13} /> : <Tick size={13} />}
+          {event === "blocked" ? (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+                <Tick size={13} />
               </span>
-              {last.kind === "blocked" ? (
-                <div>
-                  <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-rose-300">
-                    Transaction reverted
-                  </p>
-                  <p className="mt-1 font-mono text-[12px] text-white/60">
-                    RugBlocked(requested: {last.requested}, alreadyRemoved: {last.alreadyRemoved}, released: {last.released})
-                  </p>
-                  <p className={cn(type.bodySm, "mt-1.5")}>
-                    The hook reverted before any liquidity moved. The pool is intact.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-emerald-300">
-                    LiquidityReleased
-                  </p>
-                  <p className="mt-1 font-mono text-[12px] text-white/60">
-                    Released {last.amount}% · cumulative removed {last.removedSoFar}% of {last.released}% unlocked
-                  </p>
-                  <p className={cn(type.bodySm, "mt-1.5")}>
-                    Within the vested portion, so the hook let exactly this much through.
-                  </p>
-                </div>
-              )}
+              <div>
+                <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-emerald-300">
+                  Rug reverted · RugBlocked
+                </p>
+                <p className="mt-1 font-mono text-[12px] text-white/60">
+                  beforeRemoveLiquidity: requested 100% &gt; released 0% → revert
+                </p>
+                <p className={cn(type.bodySm, "mt-1.5")}>
+                  The creator tried to drain the pool. The hook reverted before any liquidity moved —
+                  the chart never flinched, buyers untouched.
+                </p>
+              </div>
+            </div>
+          ) : event === "crashed" ? (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-rose-500/25 bg-rose-500/[0.06] p-4">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
+                <Cancel size={13} />
+              </span>
+              <div>
+                <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-rose-300">
+                  Rugged · liquidity gone
+                </p>
+                <p className="mt-1 font-mono text-[12px] text-white/60">
+                  Creator removed the pool. Price → 0. Every buyer wiped out.
+                </p>
+                <p className={cn(type.bodySm, "mt-1.5")}>
+                  This is every unprotected launch. Latch makes this exact transaction revert.
+                </p>
+              </div>
             </div>
           ) : (
-            <p className={cn(type.bodySm, "mt-5")}>{stateNote(s, day, removed)}</p>
+            <p className={cn(type.bodySm, "mt-5")}>
+              The launch seed is locked by Latch on a public schedule. Pull it and the hook reverts.
+            </p>
           )}
         </div>
 
-        <div className="flex flex-col gap-5 lg:col-span-5">
-          <div className={cn("rounded-2xl", surface.panel, "p-6 md:p-7")}>
+        <div className="flex flex-col gap-5 lg:col-span-4">
+          <div className={cn("rounded-2xl", surface.panel, "p-5 md:p-6")}>
             <span className={type.eyebrow}>
-              <Layers size={14} /> The gate, live
+              <Activity size={14} /> Live trades
             </span>
-            <pre className="mt-4 overflow-x-auto rounded-xl border border-white/[0.07] bg-black p-4 font-mono text-[11.5px] leading-relaxed text-white/70">
-              <code>
-                {`function _beforeRemoveLiquidity(...) {\n`}
-                {`  released = releasedAmount(now);  `}
-                <span className="text-white/35">{`// ${released}`}</span>
-                {`\n  removedSoFar;                    `}
-                <span className="text-white/35">{`// ${removed}`}</span>
-                {`\n`}
-                <span
-                  className={cn(
-                    last?.kind === "blocked" && "rounded bg-rose-500/15 text-rose-300",
-                  )}
-                >
-                  {`  if (removedSoFar + ${amount} > released)\n      revert RugBlocked();`}
-                </span>
-                {`\n`}
-                <span className={cn(last?.kind === "released" && "rounded bg-emerald-500/15 text-emerald-300")}>
-                  {`  removedSoFar += ${amount};`}
-                </span>
-                {`\n}`}
-              </code>
-            </pre>
+            <ul className="mt-4 flex flex-col gap-2">
+              {launch.trades.length === 0 ? (
+                <li className="font-mono text-[12px] text-white/35">waiting for the first buy…</li>
+              ) : (
+                launch.trades.map((t) => (
+                  <li key={t.id} className="flex items-center justify-between gap-2 font-mono text-[12px]">
+                    <span className="flex items-center gap-2">
+                      <span className={cn("h-1.5 w-1.5 rounded-full", t.kind === "buy" ? "bg-emerald-400" : "bg-rose-400")} />
+                      <span className="text-white/45">{t.who}</span>
+                      <span className={t.kind === "buy" ? "text-emerald-300/80" : "text-rose-300/80"}>{t.kind}</span>
+                    </span>
+                    <span className="tabular-nums text-white/55">{t.okb.toFixed(2)} OKB</span>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
 
-          <div className={cn("rounded-2xl", surface.panel, "p-6 md:p-7")}>
-            <span className={type.eyebrow}>Where the hook fires</span>
-            <ol className="mt-4 flex flex-col gap-3">
-              {[
-                "Someone calls removeLiquidity on the pool",
-                "Uniswap v4 PoolManager calls back into the hook",
-                "beforeRemoveLiquidity checks the public schedule",
-                "Over the released amount → revert. Within it → allow.",
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/12 font-mono text-[10px] text-white/55">
-                    {i + 1}
-                  </span>
-                  <span className="text-[13px] font-light leading-[1.5] text-white/60">{step}</span>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-4 border-t border-white/[0.07] pt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
+          <div className={cn("rounded-2xl", surface.panel, "p-5 md:p-6")}>
+            <span className={type.eyebrow}>The gate</span>
+            <pre className="mt-3 overflow-x-auto rounded-xl border border-white/[0.07] bg-black p-4 font-mono text-[11px] leading-relaxed text-white/65">
+              <code>{`beforeRemoveLiquidity:
+  if (removed + amount
+      > released(now))
+    revert RugBlocked();`}</code>
+            </pre>
+            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
               No oracle · no admin key · pure pool state
             </p>
           </div>
