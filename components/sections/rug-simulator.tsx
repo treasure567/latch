@@ -9,9 +9,11 @@ import { layout, type, surface } from "@/lib/tokens";
 import {
   initLaunch,
   tick,
+  applyTrade,
   rugWithoutLatch,
   marketCap,
   changePct,
+  RELEASE_STEPS,
   type Launch,
 } from "@/lib/launch-sim";
 
@@ -28,6 +30,7 @@ export function RugSimulator() {
   const [launch, setLaunch] = useState<Launch>(initLaunch);
   const [event, setEvent] = useState<RugEvent>(null);
   const [shake, setShake] = useState(0);
+  const [tradeOkb, setTradeOkb] = useState(1);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -164,7 +167,38 @@ export function RugSimulator() {
             </svg>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-white/[0.07] pt-5">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">Trade it</span>
+            <input
+              type="number"
+              min={0.1}
+              step={0.1}
+              value={tradeOkb}
+              onChange={(e) => setTradeOkb(Math.max(0.1, Number(e.target.value)))}
+              disabled={rugged}
+              className="h-9 w-20 rounded-lg border border-white/10 bg-black px-2 text-right font-mono text-sm text-white outline-none disabled:opacity-40"
+              aria-label="Amount in OKB"
+            />
+            <span className="font-mono text-[11px] text-white/40">OKB</span>
+            <button
+              type="button"
+              onClick={() => setLaunch((l) => applyTrade(l, "buy", tradeOkb))}
+              disabled={rugged}
+              className="inline-flex h-9 items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 text-[12px] font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-30"
+            >
+              Buy
+            </button>
+            <button
+              type="button"
+              onClick={() => setLaunch((l) => applyTrade(l, "sell", tradeOkb))}
+              disabled={rugged}
+              className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-[12px] text-white/70 transition-colors hover:border-white/30 hover:text-white disabled:opacity-30"
+            >
+              Sell
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={tryRug}
@@ -265,6 +299,24 @@ export function RugSimulator() {
             </pre>
             <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
               No oracle · no admin key · pure pool state
+            </p>
+          </div>
+
+          <div className={cn("rounded-2xl", surface.panel, "p-5 md:p-6")}>
+            <span className={type.eyebrow}>Release schedule</span>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {RELEASE_STEPS.map((step) => (
+                <span
+                  key={step.when}
+                  className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-white/55"
+                >
+                  {step.when} · {step.pct}%
+                </span>
+              ))}
+            </div>
+            <p className={cn(type.bodySm, "mt-3")}>
+              Public and immutable. The seed unlocks gradually — never all at once, so there is no
+              single moment the pool can vanish.
             </p>
           </div>
         </div>

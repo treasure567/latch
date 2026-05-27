@@ -82,6 +82,34 @@ export function tick(l: Launch): Launch {
   return { ...l, reserveOkb, reserveToken, holders, volume, history, trades, seq };
 }
 
+export function applyTrade(l: Launch, kind: "buy" | "sell", okb: number): Launch {
+  if (l.status !== "live" || okb <= 0) return l;
+  let { reserveOkb, reserveToken, holders, volume, seq } = l;
+  const k = reserveOkb * reserveToken;
+  if (kind === "buy") {
+    reserveOkb += okb;
+    reserveToken = k / reserveOkb;
+    holders += 1;
+  } else {
+    const out = Math.min(okb, reserveOkb * 0.5);
+    reserveOkb = Math.max(0.5, reserveOkb - out);
+    reserveToken = k / reserveOkb;
+  }
+  volume += okb;
+  seq += 1;
+  const history = [...l.history, reserveOkb / reserveToken].slice(-HISTORY_LEN);
+  const trades = [{ id: seq, kind, who: "you", okb }, ...l.trades].slice(0, 7);
+  return { ...l, reserveOkb, reserveToken, holders, volume, history, trades, seq };
+}
+
+export const RELEASE_STEPS = [
+  { when: "now", pct: 0 },
+  { when: "week 1", pct: 25 },
+  { when: "week 2", pct: 50 },
+  { when: "week 3", pct: 75 },
+  { when: "week 4", pct: 100 },
+];
+
 export function rugWithoutLatch(l: Launch): Launch {
   const reserveOkb = 0.0002;
   const history = [...l.history, reserveOkb / l.reserveToken].slice(-HISTORY_LEN);
