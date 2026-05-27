@@ -17,6 +17,22 @@ There are three ways in: **verify** a pool before you buy, **launch** a locked p
   </Card>
 </CardGroup>
 
+## See a rug get blocked
+
+The fastest way to feel what Latch does: ask the live demo pool to pull all of its locked liquidity, and watch the real hook refuse. No wallet, no gas — just an `eth_call` against X Layer mainnet.
+
+```bash
+cast call 0x6C72e2f113eC4680565388345793f6478D1083e2 \
+  "attemptFull()" \
+  --rpc-url https://rpc.xlayer.tech
+```
+
+It **reverts** — and the revert is the point. v4 wraps the hook's reason as `WrappedError(LatchHook, beforeRemoveLiquidity, RugBlocked(requested, alreadyRemoved, released))`, where `released` is `0` because the demo pool's cliff is far in the future. The liquidity cannot move.
+
+<Tip>
+  `RugDemo` ([`0x6C72e2f113eC4680565388345793f6478D1083e2`](https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2)) is the same contract behind the "try it onchain" panel on the Latch site. Send the call as a real transaction instead and it is mined as a failed rug, permanently on the explorer.
+</Tip>
+
 ## Verify a pool
 
 Verification is a chain read — no wallet signature required. Query `LatchRegistry` for the pool you are about to trade against.

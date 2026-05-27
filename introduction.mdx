@@ -67,7 +67,12 @@ Latch is live and verified on X Layer mainnet (chainId `196`).
 | `LatchHook` | [`0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200`](https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200) |
 | `LatchRegistry` | [`0x5Af8F4928A776A7d656B873CF91B9614C8c23f86`](https://www.oklink.com/xlayer/address/0x5Af8F4928A776A7d656B873CF91B9614C8c23f86) |
 | `LatchLauncher` | [`0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69`](https://www.oklink.com/xlayer/address/0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69) |
+| `RugDemo` | [`0x6C72e2f113eC4680565388345793f6478D1083e2`](https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2) |
 | Uniswap v4 `PoolManager` | [`0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32`](https://www.oklink.com/xlayer/address/0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32) |
+
+<Note>
+  **Try the rug yourself.** `RugDemo` is a live, valueless demo pool governed by the real hook with a far-future cliff, so `released` stays `0` and every removal reverts. The Latch site lets anyone attempt it — a read-only call returns the real `RugBlocked` revert with no wallet, and a sent transaction is mined as a failed rug on the explorer.
+</Note>
 
 <Card title="Get started" icon="play" href="/quickstart">
   Verify a pool or launch one in a single transaction.

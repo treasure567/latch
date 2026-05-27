@@ -12,6 +12,7 @@ Latch is four contracts, deployed and verified on X Layer mainnet (chainId `196`
 | `LatchHook` | [`0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200`](https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200) |
 | `LatchRegistry` | [`0x5Af8F4928A776A7d656B873CF91B9614C8c23f86`](https://www.oklink.com/xlayer/address/0x5Af8F4928A776A7d656B873CF91B9614C8c23f86) |
 | `LatchLauncher` | [`0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69`](https://www.oklink.com/xlayer/address/0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69) |
+| `RugDemo` | [`0x6C72e2f113eC4680565388345793f6478D1083e2`](https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2) |
 | Uniswap v4 `PoolManager` | [`0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32`](https://www.oklink.com/xlayer/address/0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32) |
 
 ## LatchHook.sol
@@ -86,6 +87,22 @@ A fixed-supply OpenZeppelin ERC-20 with **no mint, no blacklist, no pause, no ow
 <Note>
   Rationale: a malicious token would defeat any LP lock, so Verified launches use a safe template. See [Honest Scope](/concepts/honest-scope).
 </Note>
+
+## RugDemo.sol
+
+A self-contained, valueless demo pool that powers the "try it onchain" panel on the Latch site. Not part of the core protocol — it exists so anyone can fire a real rug at the live hook.
+
+```solidity
+function setup() external;           // init pool, seed, write a far-future-cliff schedule, register
+function attempt(uint128 amount) external;   // tries to remove `amount` — reverts at the hook
+function attemptFull() external;             // tries to pull all locked liquidity — reverts
+```
+
+On `setup()` it mints two throwaway ERC-20s to itself, stands up a real v4 pool on the canonical hook with a cliff far in the future (so `releasedAmount` is `0` indefinitely), seeds liquidity, and lists in the registry. Because the gate is pure pool state, `attempt`/`attemptFull` revert `RugBlocked` for **any** caller — no LP position required.
+
+<Tip>
+  A read-only `eth_call` to `attemptFull()` returns the real `WrappedError` → `RugBlocked` with no wallet and no gas. A sent transaction is mined as a **failed** rug — the permanent onchain artifact of the lock holding.
+</Tip>
 
 ## Test suite
 
