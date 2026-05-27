@@ -1,0 +1,74 @@
+---
+title: "Introduction"
+description: "Latch is a Uniswap v4 Hook that locks launch liquidity onchain so the creator physically cannot pull it. Not a fee — a revert."
+---
+
+## The pool you can't rug
+
+Latch is a Uniswap v4 Hook that locks launch liquidity onchain so the creator **physically cannot pull it**. A premature or oversized liquidity removal does not get taxed — it **reverts**. Liquidity unlocks gradually on a public, immutable vesting schedule, and a registry lets buyers verify a pool is Latch-locked *before* they buy.
+
+<Note>
+  Latch enforces its guarantee in pure pool state: no oracle, no identity check, no admin key. The gate fires regardless of who owns or transfers the LP position.
+</Note>
+
+## The wedge: they tax the dump, we make the rug revert
+
+The crowded approach in this hackathon is a **dynamic or decaying swap fee** — economically deterring a dump by making it expensive. The problem: a determined seller just pays the fee and dumps anyway. Economics deter; they do not guarantee.
+
+Latch is a different class. It changes **what the pool guarantees, not what it charges.**
+
+<CardGroup cols={2}>
+  <Card title="Fee hooks tax the dump" icon="coins">
+    A decaying fee makes a rug expensive. A motivated rugger pays it and pulls liquidity regardless. The exit stays open.
+  </Card>
+  <Card title="Latch makes the rug revert" icon="lock">
+    An over-schedule liquidity removal hits a `revert`, not a charge. The transaction fails. The exit is physically closed until the schedule says otherwise.
+  </Card>
+</CardGroup>
+
+<Info>
+  Latch never touches the swap fee. `getHookPermissions()` enables **only** `beforeRemoveLiquidity`. It is deliberately not a fee hook.
+</Info>
+
+## How it fits together
+
+Latch is three deployed, verified contracts on X Layer that compose into a single guarantee.
+
+<CardGroup cols={3}>
+  <Card title="The Lock" icon="lock" href="/concepts/the-lock">
+    `LatchHook` — the v4 hook that reverts an early or oversized liquidity removal against a write-once vesting schedule.
+  </Card>
+  <Card title="The Registry" icon="list-check" href="/concepts/the-registry">
+    `LatchRegistry` — an onchain verify-before-you-buy directory. The frontend reads it directly from chain.
+  </Card>
+  <Card title="The Launcher" icon="rocket" href="/concepts/the-launcher">
+    `LatchLauncher` — one transaction: deploy token, init pool, seed liquidity, write schedule, list in registry.
+  </Card>
+</CardGroup>
+
+## What a liquidity lock does and does not do
+
+We are scrupulously honest about scope. A liquidity lock closes exactly **one** rug vector — the hard liquidity pull. On its own it does not stop a supply dump, a malicious token, or a creator seeding a second unprotected pool. We close most of those for launcher pools and disclose the rest plainly.
+
+<Card title="Read the honest scope" icon="scale-balanced" href="/concepts/honest-scope">
+  We do not claim foolproof. See exactly which vectors Latch closes, which it mitigates, and which remain.
+</Card>
+
+## Deployed on X Layer
+
+Latch is live and verified on X Layer mainnet (chainId `196`).
+
+<Note>
+  Uniswap v4 is not on X Layer testnet, so Latch deploys to mainnet against the canonical v4 `PoolManager`.
+</Note>
+
+| Contract | Address |
+| --- | --- |
+| `LatchHook` | [`0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200`](https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200) |
+| `LatchRegistry` | [`0x5Af8F4928A776A7d656B873CF91B9614C8c23f86`](https://www.oklink.com/xlayer/address/0x5Af8F4928A776A7d656B873CF91B9614C8c23f86) |
+| `LatchLauncher` | [`0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69`](https://www.oklink.com/xlayer/address/0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69) |
+| Uniswap v4 `PoolManager` | [`0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32`](https://www.oklink.com/xlayer/address/0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32) |
+
+<Card title="Get started" icon="play" href="/quickstart">
+  Verify a pool or launch one in a single transaction.
+</Card>

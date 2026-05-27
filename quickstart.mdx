@@ -1,0 +1,106 @@
+---
+title: "Quickstart"
+description: "Verify a Latch-locked pool from chain, launch a verified pool in one transaction, or build and test the contracts locally with Foundry."
+---
+
+There are three ways in: **verify** a pool before you buy, **launch** a locked pool in one transaction, or **build** the contracts yourself. Pick your path.
+
+<CardGroup cols={3}>
+  <Card title="Verify a pool" icon="magnifying-glass" href="#verify-a-pool">
+    Read the registry to confirm a pool is Latch Verified before you buy.
+  </Card>
+  <Card title="Launch a pool" icon="rocket" href="#launch-a-pool">
+    Deploy token, pool, lock, and registry listing in a single call.
+  </Card>
+  <Card title="Build locally" icon="hammer" href="#build-the-contracts">
+    Clone, build, and run the Foundry test suite.
+  </Card>
+</CardGroup>
+
+## Verify a pool
+
+Verification is a chain read — no wallet signature required. Query `LatchRegistry` for the pool you are about to trade against.
+
+<Steps>
+  <Step title="Get the pool ID">
+    A v4 `PoolId` is the keccak hash of the pool's `PoolKey`. If you have a pool from the launcher, `LatchLauncher.launch` returns it directly.
+  </Step>
+  <Step title="Call isVerified">
+    `isVerified(PoolId id)` returns a `bool`. `true` means the pool is registered as Latch Verified.
+  </Step>
+  <Step title="Read the full entry">
+    `getEntry(PoolId id)` returns the `Entry` struct with the registration details. The frontend reads this directly from chain to render the schedule and time-to-next-unlock.
+  </Step>
+</Steps>
+
+```bash
+# Read isVerified for a pool (returns true/false)
+cast call 0x5Af8F4928A776A7d656B873CF91B9614C8c23f86 \
+  "isVerified(bytes32)(bool)" <POOL_ID> \
+  --rpc-url https://rpc.xlayer.tech
+
+# Read the full registry entry
+cast call 0x5Af8F4928A776A7d656B873CF91B9614C8c23f86 \
+  "getEntry(bytes32)" <POOL_ID> \
+  --rpc-url https://rpc.xlayer.tech
+```
+
+<Info>
+  Because enforcement is pure pool state, verification tells you the pool *is locked* — it does not depend on the Latch backend being online. See [The Registry](/concepts/the-registry).
+</Info>
+
+## Launch a pool
+
+`LatchLauncher.launch(LaunchParams p)` does everything in one transaction: deploys the token, initializes the pool on the `PoolManager` with the Latch hook, seeds liquidity, writes the vesting schedule via the hook, and lists the pool in the registry.
+
+```solidity
+// One call. Returns the pool id and the deployed token address.
+(PoolId id, address token) = LatchLauncher.launch(params);
+```
+
+It returns `(PoolId id, address token)` and emits `PoolLaunched(poolId, token, creator, liquidity)`.
+
+<Warning>
+  The write to the hook's schedule is **write-once**. The launcher sets `cliffTime`, `periodLength`, `periodsCount`, and `totalLocked` exactly once — they cannot be changed afterward, by anyone.
+</Warning>
+
+<Card title="Launcher details" icon="rocket" href="/concepts/the-launcher">
+  See the full `LaunchParams` flow and what makes a launched pool fully Verified.
+</Card>
+
+## Build the contracts
+
+Latch is built with Foundry on the Uniswap v4-template.
+
+<Steps>
+  <Step title="Clone the repo">
+    The contracts live on the `backend` branch.
+
+    ```bash
+    git clone https://github.com/treasure567/latch.git
+    cd latch
+    git checkout backend
+    ```
+  </Step>
+  <Step title="Build">
+    ```bash
+    forge build
+    ```
+  </Step>
+  <Step title="Run the tests">
+    The suite is 26 tests against a real local `PoolManager` via the template's `Deployers` harness.
+
+    ```bash
+    forge test -vvv
+    ```
+  </Step>
+  <Step title="Snapshot gas (optional)">
+    ```bash
+    forge snapshot
+    ```
+  </Step>
+</Steps>
+
+<Card title="Build the contracts" icon="file-code" href="/build/contracts">
+  Full contract reference, the test matrix, and what every function does.
+</Card>

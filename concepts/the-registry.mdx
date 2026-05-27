@@ -1,0 +1,65 @@
+---
+title: "The Registry"
+description: "LatchRegistry is an onchain verify-before-you-buy directory. Buyers confirm a pool is Latch Verified before they trade — read straight from chain."
+---
+
+`LatchRegistry` answers one question for a buyer: **is this pool actually locked?** It is an onchain directory of Latch pools that the frontend reads directly from chain.
+
+## Verify before you buy
+
+The single most important moment in a launch is the buy. The registry lets anyone confirm a pool's status *before* committing funds, without trusting an off-chain claim.
+
+<CardGroup cols={2}>
+  <Card title="isVerified" icon="circle-check">
+    `isVerified(PoolId id)` returns a `bool` — the fast yes/no a UI needs to gate a buy.
+  </Card>
+  <Card title="getEntry" icon="file-lines">
+    `getEntry(PoolId id)` returns the `Entry` struct with the full registration record.
+  </Card>
+</CardGroup>
+
+## Interface
+
+```solidity
+function register(/* ... */) external;          // reverts AlreadyRegistered on dup
+function isVerified(PoolId id) external view returns (bool);
+function getEntry(PoolId id) external view returns (Entry memory);
+```
+
+<ResponseField name="register(...)" type="external">
+  Lists a pool in the registry. Reverts `AlreadyRegistered` if the pool is already listed. Emits `PoolVerified`.
+</ResponseField>
+<ResponseField name="isVerified(PoolId id)" type="bool">
+  Whether the pool is registered as Latch Verified.
+</ResponseField>
+<ResponseField name="getEntry(PoolId id)" type="Entry">
+  The full `Entry` struct for the pool.
+</ResponseField>
+
+<Note>
+  Launched pools are listed automatically — `LatchLauncher.launch` calls `register` as part of its single transaction.
+</Note>
+
+## What "Verified" means
+
+A registry listing is not a vibe; it is a specific, checkable claim. Full **Verified** status means three layers:
+
+<AccordionGroup>
+  <Accordion title="1. LP locked under a public schedule" icon="lock">
+    Liquidity is locked via the canonical Latch hook on a write-once, public vesting schedule.
+  </Accordion>
+  <Accordion title="2. Safe token template" icon="shield-check">
+    The token was launched through Latch with a fixed-supply template — no mint, no blacklist, no owner dump privileges.
+  </Accordion>
+  <Accordion title="3. Creator allocation vested (stretch)" icon="hourglass">
+    The creator's own token allocation is itself vested, closing the supply-dump vector.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Externally-created pools that only use the hook are **lock-only**, not full **Verified**. The lock is real, but the token and allocation guarantees of a launcher pool are not present. The registry distinguishes the two — do not read "uses the hook" as "fully Verified."
+</Warning>
+
+## Read straight from chain
+
+The frontend reads the registry directly, so verification does not depend on Latch's servers being up. The Latch backend indexes `PoolVerified` events for fast search and listing, but the source of truth is the contract. See [Build → Architecture](/build/architecture) for the read-only indexer, and [Honest Scope](/concepts/honest-scope) for why buying through the verified pool is the answer to the second-pool vector.

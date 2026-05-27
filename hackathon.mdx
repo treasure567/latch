@@ -1,0 +1,85 @@
+---
+title: "Hackathon"
+description: "Latch was built for X Layer BuildX / Hook the Future (X Layer × Uniswap × Flap) — a structural anti-rug class, not another fee hook."
+---
+
+Latch was built for **X Layer BuildX — "Hook the Future"**, a hackathon by X Layer, Uniswap, and Flap.
+
+<CardGroup cols={2}>
+  <Card title="Build window" icon="calendar">
+    May 22–28, 2026. Submit by **May 28, 12:00 UTC**.
+  </Card>
+  <Card title="Prize pool" icon="trophy">
+    14,000 USDT total. First prize 5,000 USDT + OKX official PR support + a cooperation opportunity + priority access to the X Layer Future Accelerator.
+  </Card>
+</CardGroup>
+
+## The wedge
+
+The crowded entry in this hackathon is a dynamic or decaying **swap fee** that economically deters a dump. A determined seller pays the fee and dumps anyway — economics deter, they do not guarantee.
+
+Latch is a different class. It changes **what the pool guarantees, not what it charges.** They tax the dump; we make the rug revert. Latch never touches the swap fee.
+
+## Disqualifiers Latch clears
+
+<AccordionGroup>
+  <Accordion title="Built around a v4 hook" icon="check">
+    `LatchHook` is a `uniswap-hooks` `BaseHook` enforcing the lock in `beforeRemoveLiquidity`.
+  </Accordion>
+  <Accordion title="Deployed and verified on X Layer" icon="check">
+    `LatchHook`, `LatchRegistry`, and `LatchLauncher` are deployed and verified on X Layer mainnet (chainId `196`).
+  </Accordion>
+  <Accordion title="Active dedicated X account" icon="check">
+    A dedicated X account for the project.
+  </Accordion>
+  <Accordion title="All logic written during the event" icon="check">
+    Every contract and the full stack were written within the build window.
+  </Accordion>
+</AccordionGroup>
+
+## How Latch scores
+
+<CardGroup cols={2}>
+  <Card title="Innovation" icon="lightbulb">
+    A structural anti-rug **class** — a revert, not a fee. Not another fee hook.
+  </Card>
+  <Card title="Market potential" icon="chart-line">
+    Rugs are the #1 reason buyers lose money on launches. The registry is a buyer-facing demand surface in Flap's issuance lane.
+  </Card>
+  <Card title="Completion" icon="circle-check">
+    Hook + registry + launcher deployed and verified; every rule triggered by real transactions; a 26-test Foundry suite.
+  </Card>
+  <Card title="AI + human judging" icon="robot">
+    A dual track. The AI judge rewards NatSpec, tests, verified contracts, and an event per meaningful action — all of which Latch has.
+  </Card>
+</CardGroup>
+
+<Note>
+  Latch emits an event for every meaningful state change — `ScheduleSet`, `LiquidityReleased`, `PoolVerified`, `PoolLaunched` — with NatSpec on every function and a test suite run against a real local `PoolManager`.
+</Note>
+
+## Try it in two paths
+
+<Steps>
+  <Step title="Verify a pool">
+    Read `isVerified(PoolId id)` and `getEntry(PoolId id)` on `LatchRegistry` to confirm a pool is Latch Verified before you buy.
+  </Step>
+  <Step title="Launch a pool">
+    Call `LatchLauncher.launch(LaunchParams p)` — one transaction deploys the token, initializes the locked pool, seeds liquidity, and lists it in the registry.
+  </Step>
+</Steps>
+
+<Card title="Quickstart" icon="play" href="/quickstart">
+  Concrete commands for both paths, plus building the contracts locally.
+</Card>
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="Repository" icon="github" href="https://github.com/treasure567/latch">
+    Contracts on the `backend` branch.
+  </Card>
+  <Card title="X Layer Explorer" icon="magnifying-glass" href="https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200">
+    `LatchHook`, deployed and verified.
+  </Card>
+</CardGroup>

@@ -1,0 +1,123 @@
+---
+title: "Contracts"
+description: "The Latch contract reference — LatchHook, LatchRegistry, LatchLauncher, DemoToken — deployed and verified on X Layer, with a 26-test Foundry suite."
+---
+
+Latch is four contracts, deployed and verified on X Layer mainnet (chainId `196`), with NatSpec on every function.
+
+## Deployed addresses
+
+| Contract | Address |
+| --- | --- |
+| `LatchHook` | [`0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200`](https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200) |
+| `LatchRegistry` | [`0x5Af8F4928A776A7d656B873CF91B9614C8c23f86`](https://www.oklink.com/xlayer/address/0x5Af8F4928A776A7d656B873CF91B9614C8c23f86) |
+| `LatchLauncher` | [`0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69`](https://www.oklink.com/xlayer/address/0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69) |
+| Uniswap v4 `PoolManager` | [`0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32`](https://www.oklink.com/xlayer/address/0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32) |
+
+## LatchHook.sol
+
+Inherits `BaseHook` from `uniswap-hooks` (Solidity `^0.8.26`). The lock.
+
+<Tabs>
+  <Tab title="Permissions">
+    `getHookPermissions()` enables **only** `beforeRemoveLiquidity = true` — everything else is `false`. It is deliberately not a fee hook and never touches the swap fee.
+  </Tab>
+  <Tab title="Schedule">
+    `setSchedule(PoolKey key, uint64 cliffTime, uint64 periodLength, uint32 periodsCount, uint256 totalLocked)` writes the schedule **exactly once**. Reverts `ScheduleExists` if already set; reverts `InvalidSchedule` if `periodLength`, `periodsCount`, or `totalLocked` is `0`. Records `creator = msg.sender` for transparency only — no privilege. Emits `ScheduleSet(poolId, creator, totalLocked, cliffTime, periodLength, periodsCount)`.
+  </Tab>
+  <Tab title="Enforcement">
+    `_beforeRemoveLiquidity(...)`: pools with `totalLocked == 0` and non-removals pass through. Otherwise `removeAmount = uint256(-liquidityDelta)`, `released = releasedAmount(now)`, `already = removedSoFar[id]`; if `already + removeAmount > released` it reverts `RugBlocked(requested, alreadyRemoved, released)`; else updates `removedSoFar` and emits `LiquidityReleased(poolId, amount, cumulativeRemoved, released)`.
+  </Tab>
+  <Tab title="Storage & views">
+    Storage: `mapping(PoolId => Schedule) schedules`; `mapping(PoolId => uint256) removedSoFar`. Views: `releasedAmount(PoolId id, uint256 timestamp)` and `wouldExceedLock(PoolId id, uint256 amount, uint256 timestamp)`.
+  </Tab>
+</Tabs>
+
+<Warning>
+  `RugBlocked` is a custom **error**, not an event. A reverting tx rolls back its logs, so the onchain artifact of a blocked rug is the **failed transaction** carrying the `RugBlocked` revert reason — which v4 re-wraps as `WrappedError`. Index failed txs, not events, to surface blocked rugs.
+</Warning>
+
+<Info>
+  Enforcement is pure pool state: no oracle, no identity check, no admin key. The gate fires regardless of who owns or transfers the LP position — transferring the LP NFT does not bypass the lock.
+</Info>
+
+### Schedule type and math
+
+The `Schedule` struct lives in `libraries/LatchTypes.sol`; all liquidity is in v4 liquidity units (L).
+
+```solidity
+struct Schedule {
+    uint64  cliffTime;
+    uint64  periodLength;
+    uint32  periodsCount;
+    address creator;
+    uint256 totalLocked;
+}
+```
+
+`LatchMath.releasedAmount(Schedule s, uint256 timestamp)` returns `0` before `cliffTime`, then unlocks one equal step (`totalLocked / periodsCount`) per `periodLength` elapsed after the cliff, reaching `totalLocked` after `periodsCount` steps. It is **stepwise, not continuous**.
+
+## LatchRegistry.sol
+
+The verify-before-you-buy directory.
+
+```solidity
+function register(/* ... */) external;          // reverts AlreadyRegistered on dup
+function isVerified(PoolId id) external view returns (bool);
+function getEntry(PoolId id) external view returns (Entry memory);
+```
+
+Defines the `Entry` struct and emits `PoolVerified`. The frontend reads it directly from chain.
+
+## LatchLauncher.sol
+
+The one-transaction launch.
+
+```solidity
+function launch(LaunchParams p) external returns (PoolId id, address token);
+```
+
+Deploys the token, initializes the pool on the `PoolManager` with the Latch hook, seeds liquidity, writes the schedule via the hook, and lists the pool in the registry — atomically. Defines `LaunchParams` and emits `PoolLaunched(poolId, token, creator, liquidity)`. Implements `unlockCallback` for v4's unlock pattern, which reverts `NotPoolManager` if called by anyone other than the `PoolManager`.
+
+## DemoToken.sol
+
+A fixed-supply OpenZeppelin ERC-20 with **no mint, no blacklist, no pause, no owner privileges**.
+
+<Note>
+  Rationale: a malicious token would defeat any LP lock, so Verified launches use a safe template. See [Honest Scope](/concepts/honest-scope).
+</Note>
+
+## Test suite
+
+26 Foundry tests run against a real local `PoolManager` via the template's `Deployers` harness.
+
+<AccordionGroup>
+  <Accordion title="Schedule math" icon="calculator">
+    Boundary cases and fuzz tests for `releasedAmount` — before cliff, at each step, and at full release.
+  </Accordion>
+  <Accordion title="Rug reverts" icon="ban">
+    Removals revert before the cliff and on oversized removals (`RugBlocked`).
+  </Accordion>
+  <Accordion title="Vested release" icon="unlock">
+    The vested portion can be released as the schedule progresses.
+  </Accordion>
+  <Accordion title="Cumulative cap" icon="layer-group">
+    The cumulative cap holds across multiple removals — small pulls cannot drain past `released`.
+  </Accordion>
+  <Accordion title="Registry" icon="list-check">
+    `register` / `isVerified` behavior, including `AlreadyRegistered`.
+  </Accordion>
+  <Accordion title="End-to-end launch" icon="rocket">
+    The one-transaction launch produces a verified, locked pool.
+  </Accordion>
+</AccordionGroup>
+
+```bash
+forge build
+forge test -vvv
+forge snapshot
+```
+
+<Card title="Deploy" icon="upload" href="/build/deploy">
+  How the hook address is mined and how to dry-run against live mainnet state.
+</Card>

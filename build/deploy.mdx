@@ -1,0 +1,60 @@
+---
+title: "Deploy"
+description: "Deploying Latch with Foundry. v4 hook addresses encode their callbacks, so the hook is deployed via CREATE2 with a mined salt. Dry-run against live X Layer state."
+---
+
+Latch deploys with Foundry, built on the Uniswap v4-template. The one wrinkle is that a v4 hook's **address itself** must encode which callbacks it enables.
+
+## The stack
+
+<CardGroup cols={2}>
+  <Card title="Foundry" icon="hammer">
+    `forge build`, `forge test`, `forge snapshot`. Built on the Uniswap v4-template.
+  </Card>
+  <Card title="Dependencies" icon="cube">
+    `uniswap-hooks` `BaseHook`, `v4-core` / `v4-periphery`, `hookmate`, and OpenZeppelin. NatSpec on every function.
+  </Card>
+</CardGroup>
+
+## Why the hook needs a mined address
+
+<Warning>
+  In Uniswap v4, the **low bits of a hook's address** encode which callbacks it enables. The deployed `LatchHook` address must carry the `BEFORE_REMOVE_LIQUIDITY` flag, or the `PoolManager` will not call `_beforeRemoveLiquidity` — and the lock would never fire.
+</Warning>
+
+To get an address with the right bits, `script/DeployLatch.s.sol` mines a `CREATE2` salt with `HookMiner` and deploys the hook via `CREATE2`. The salt is searched until the resulting address carries the required flag.
+
+## Dry-run against live state
+
+A dry-run is read-only — no key, no funds — and is validated against live X Layer mainnet state via a fork.
+
+```bash
+forge script script/DeployLatch.s.sol \
+  --fork-url https://rpc.xlayer.tech
+```
+
+<Info>
+  This simulates the full deployment, including the salt mining, against real mainnet state without broadcasting anything. Use it to confirm the mined hook address and the launch flow before spending gas.
+</Info>
+
+## Broadcast
+
+A real broadcast needs a deployer key funded with a little OKB. Add `--broadcast` and the RPC.
+
+```bash
+forge script script/DeployLatch.s.sol \
+  --rpc-url https://rpc.xlayer.tech \
+  --broadcast
+```
+
+<Note>
+  Uniswap v4 is not on X Layer testnet, so Latch deploys to **mainnet** (chainId `196`) against the canonical v4 `PoolManager` at [`0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32`](https://www.oklink.com/xlayer/address/0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32).
+</Note>
+
+## Repository
+
+The contracts live on the `backend` branch.
+
+<Card title="github.com/treasure567/latch" icon="github" href="https://github.com/treasure567/latch">
+  The `backend` branch holds the contracts, the deploy script, and the Foundry test suite.
+</Card>

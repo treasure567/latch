@@ -1,0 +1,56 @@
+---
+title: "The Launcher"
+description: "LatchLauncher deploys a token, initializes a v4 pool with the Latch hook, seeds liquidity, writes the schedule, and lists the pool — in one transaction."
+---
+
+`LatchLauncher` turns a fully Verified launch into a single transaction. It composes the token, the pool, the lock, and the registry listing so a creator cannot accidentally — or intentionally — skip a step.
+
+## One transaction
+
+```solidity
+function launch(LaunchParams p) external returns (PoolId id, address token);
+```
+
+`launch` does all of the following atomically:
+
+<Steps>
+  <Step title="Deploy the token">
+    Deploys a fixed-supply `DemoToken` (a safe ERC-20 template).
+  </Step>
+  <Step title="Initialize the pool">
+    Initializes the pool on the v4 `PoolManager` with the canonical Latch hook attached.
+  </Step>
+  <Step title="Seed liquidity">
+    Adds the launch liquidity to the pool.
+  </Step>
+  <Step title="Write the schedule">
+    Writes the vesting schedule via the hook (`setSchedule`) — write-once.
+  </Step>
+  <Step title="List in the registry">
+    Registers the pool in `LatchRegistry` so buyers can verify it.
+  </Step>
+</Steps>
+
+It returns `(PoolId id, address token)` and emits `PoolLaunched(poolId, token, creator, liquidity)`.
+
+<Note>
+  Because everything happens in one call, a launched pool is locked from the very first block it exists — there is no window where the pool is live but unprotected.
+</Note>
+
+## The v4 unlock pattern
+
+The launcher needs to move funds through the `PoolManager`, which uses v4's unlock/callback pattern. `LatchLauncher` implements `unlockCallback` for this purpose.
+
+<Warning>
+  `unlockCallback` reverts `NotPoolManager` if it is called by anyone other than the `PoolManager`. Only the manager can drive the callback during an unlock.
+</Warning>
+
+## The safe token template
+
+Launches use `DemoToken`: a fixed-supply OpenZeppelin ERC-20 with **no mint, no blacklist, no pause, and no owner privileges**.
+
+<Info>
+  The rationale is direct: a malicious token would defeat any LP lock. If the deployer could mint-and-dump or blacklist buyers, locking the liquidity would be theater. So Verified launches use a token that physically cannot do those things.
+</Info>
+
+This is what makes a launcher pool eligible for full **Verified** status rather than lock-only. See [The Registry](/concepts/the-registry) for the three layers and [Honest Scope](/concepts/honest-scope) for the vectors the template closes.

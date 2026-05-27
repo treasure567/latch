@@ -1,0 +1,58 @@
+---
+title: "Honest Scope"
+description: "A liquidity lock closes exactly one rug vector — the hard liquidity pull. Here is what Latch closes, what it mitigates, and what remains. No foolproof claims."
+---
+
+Latch is precise about what it guarantees. A liquidity lock closes exactly **one** rug vector: the hard liquidity pull. This candor is a feature — overclaiming is how buyers get hurt.
+
+<Warning>
+  Latch does not claim to be foolproof. On its own, the lock does not stop a supply dump, a malicious token, a second unprotected pool, or the inherent risk of unaudited hackathon code. Read this page before you treat "locked" as "safe."
+</Warning>
+
+## What the lock does not stop on its own
+
+<AccordionGroup>
+  <Accordion title="A supply dump" icon="arrow-trend-down">
+    A creator holding a large token allocation can sell it into the pool, crashing the price without ever touching liquidity.
+
+    **Mitigation:** allocation vesting (stretch) plus disclosing the creator's allocation. Locking liquidity does not lock the creator's tokens.
+  </Accordion>
+  <Accordion title="A malicious token" icon="skull">
+    A token with mint-and-dump, blacklist, or pausable powers can defeat any LP lock.
+
+    **Closed for launcher pools:** the fixed-supply `DemoToken` template has no mint, no blacklist, no pause, no owner privileges. Externally-created tokens carry no such guarantee.
+  </Accordion>
+  <Accordion title="A second, unprotected pool" icon="copy">
+    A creator can seed a separate pool with no Latch hook and dump there.
+
+    **Answer:** the registry. Buy through the verified pool, and confirm `isVerified` before you trade. A lock on pool A says nothing about pool B — verification is what ties your buy to the protected pool.
+  </Accordion>
+  <Accordion title="Unaudited hackathon code" icon="triangle-exclamation">
+    Latch was built during a hackathon and is **not audited**. The contracts are deployed and verified on X Layer and covered by a Foundry test suite, but that is not a substitute for a formal audit.
+  </Accordion>
+</AccordionGroup>
+
+## How the layers stack up
+
+<CardGroup cols={2}>
+  <Card title="Closed by the lock" icon="lock">
+    The hard liquidity pull. An early or oversized removal reverts.
+  </Card>
+  <Card title="Closed for launcher pools" icon="shield-check">
+    Malicious-token vectors, via the fixed-supply `DemoToken` template.
+  </Card>
+  <Card title="Mitigated, not closed" icon="hourglass">
+    Supply dump — via allocation vesting (stretch) and allocation disclosure.
+  </Card>
+  <Card title="Closed by verification" icon="circle-check">
+    The second-pool trap — buy through the registry-verified pool.
+  </Card>
+</CardGroup>
+
+## Locked LPs cannot exit early — by design
+
+<Note>
+  This is intentional, not a loophole. The launch seed is locked to **guarantee a market** for buyers, and the schedule and terms are public *before* anyone buys. A creator who locks liquidity is making a commitment that is visible up front and cannot be quietly reversed.
+</Note>
+
+The point of Latch is not to claim safety it cannot deliver. It is to close the single largest rug vector with a hard guarantee, close the token vector for launches, and make every remaining risk legible so a buyer can price it.

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Latch",
+  "colors": {
+    "primary": "#10B981",
+    "light": "#34D399",
+    "dark": "#059669"
+  },
+  "background": {
+    "colors": {
+      "light": "#F6FBF9",
+      "dark": "#0A0A0A"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Space Grotesk"
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "How it works",
+            "pages": [
+              "concepts/the-lock",
+              "concepts/the-registry",
+              "concepts/the-launcher",
+              "concepts/honest-scope"
+            ]
+          },
+          {
+            "group": "Build",
+            "pages": [
+              "build/architecture",
+              "build/contracts",
+              "build/deploy"
+            ]
+          },
+          {
+            "group": "Hackathon",
+            "pages": [
+              "hackathon"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "X Layer Explorer",
+        "href": "https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "GitHub",
+      "href": "https://github.com/treasure567/latch"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com",
+      "github": "https://github.com/treasure567/latch"
+    }
+  }
+}
