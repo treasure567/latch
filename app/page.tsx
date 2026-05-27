@@ -1,6 +1,7 @@
 import { Cta } from "@/components/sections/cta";
 import { Footer } from "@/components/sections/footer";
 import { Hero } from "@/components/sections/hero";
+import { OnchainRug } from "@/components/sections/onchain-rug";
 import { Pipeline } from "@/components/sections/pipeline";
 import { QvacMatrix } from "@/components/sections/qvac-matrix";
 import { RugSimulator } from "@/components/sections/rug-simulator";
@@ -12,6 +13,7 @@ export default function Home() {
     <>
       <Hero />
       <RugSimulator />
+      <OnchainRug />
       <VerdictDemo />
       <Pipeline />
       <QvacMatrix />
