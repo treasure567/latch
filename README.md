@@ -64,5 +64,8 @@ Deployed and verified-wired on **X Layer mainnet (chainId 196)** on 2026-05-26:
 | LatchHook | [`0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200`](https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200) |
 | LatchRegistry | [`0x5Af8F4928A776A7d656B873CF91B9614C8c23f86`](https://www.oklink.com/xlayer/address/0x5Af8F4928A776A7d656B873CF91B9614C8c23f86) |
 | LatchLauncher | [`0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69`](https://www.oklink.com/xlayer/address/0x253B3520d8c75151F3c6EE02741e2f7DB2fF5c69) |
+| RugDemo | [`0x6C72e2f113eC4680565388345793f6478D1083e2`](https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2) |
 
 The hook address low 14 bits are `0x200` (exactly `BEFORE_REMOVE_LIQUIDITY`); `launcher.{poolManager,hook,registry}` confirmed onchain. Contracts not yet source-verified on the explorer (see below).
+
+`RugDemo` ([`src/RugDemo.sol`](src/RugDemo.sol), deployed via [`script/DeployRugDemo.s.sol`](script/DeployRugDemo.s.sol) on 2026-05-27) is a self-contained, valueless demo pool that powers the "try it onchain" panel on the marketing site. It stands up a real v4 pool governed by the canonical hook with a far-future cliff — so `released` stays `0` — then exposes `attempt()` / `attemptFull()`, which the hook reverts (`RugBlocked`) for any caller. Pool id `0xc253e11d80b55c5eacf46dd9f0acd31b84156a3eedffba29255f3b779aa5cacc`; verified in the registry. A read-only `eth_call` returns the real revert with no wallet; a sent transaction is mined as a failed rug.
