@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SectionMarker } from "@/components/ui/section-marker";
 import { Cancel, Tick, ShieldStrong, Refresh, Activity } from "@/lib/icons";
@@ -31,6 +31,8 @@ export function RugSimulator() {
   const [event, setEvent] = useState<RugEvent>(null);
   const [shake, setShake] = useState(0);
   const [tradeOkb, setTradeOkb] = useState(1);
+  const [pending, setPending] = useState<null | "rug" | "without">(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -39,7 +41,12 @@ export function RugSimulator() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
   const rugged = launch.status === "rugged";
+  const busy = pending !== null;
   const mc = marketCap(launch);
   const chg = changePct(launch);
 
@@ -57,14 +64,28 @@ export function RugSimulator() {
   const stroke = rugged ? "#fb7185" : "#34d399";
 
   function tryRug() {
-    setEvent("blocked");
+    if (busy || rugged) return;
+    setEvent(null);
+    setPending("rug");
+    timer.current = setTimeout(() => {
+      setEvent("blocked");
+      setPending(null);
+    }, 1300);
   }
   function rugWithout() {
-    setLaunch((l) => rugWithoutLatch(l));
-    setEvent("crashed");
-    setShake((n) => n + 1);
+    if (busy || rugged) return;
+    setEvent(null);
+    setPending("without");
+    timer.current = setTimeout(() => {
+      setLaunch((l) => rugWithoutLatch(l));
+      setEvent("crashed");
+      setShake((n) => n + 1);
+      setPending(null);
+    }, 1300);
   }
   function reset() {
+    if (timer.current) clearTimeout(timer.current);
+    setPending(null);
     setLaunch(initLaunch());
     setEvent(null);
   }
@@ -175,7 +196,7 @@ export function RugSimulator() {
               step={0.1}
               value={tradeOkb}
               onChange={(e) => setTradeOkb(Math.max(0.1, Number(e.target.value)))}
-              disabled={rugged}
+              disabled={rugged || busy}
               className="h-9 w-20 rounded-lg border border-white/10 bg-black px-2 text-right font-mono text-sm text-white outline-none disabled:opacity-40"
               aria-label="Amount in OKB"
             />
@@ -183,7 +204,7 @@ export function RugSimulator() {
             <button
               type="button"
               onClick={() => setLaunch((l) => applyTrade(l, "buy", tradeOkb))}
-              disabled={rugged}
+              disabled={rugged || busy}
               className="inline-flex h-9 items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 text-[12px] font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-30"
             >
               Buy
@@ -191,7 +212,7 @@ export function RugSimulator() {
             <button
               type="button"
               onClick={() => setLaunch((l) => applyTrade(l, "sell", tradeOkb))}
-              disabled={rugged}
+              disabled={rugged || busy}
               className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-[12px] text-white/70 transition-colors hover:border-white/30 hover:text-white disabled:opacity-30"
             >
               Sell
@@ -202,18 +223,24 @@ export function RugSimulator() {
             <button
               type="button"
               onClick={tryRug}
-              disabled={rugged}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-[13px] font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-30"
+              disabled={rugged || busy}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-[13px] font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              <ShieldStrong size={15} /> Creator: pull all liquidity
+              {pending === "rug" ? (
+                <Refresh size={15} className="animate-spin" />
+              ) : (
+                <ShieldStrong size={15} />
+              )}
+              {pending === "rug" ? "Pulling liquidity…" : "Creator: pull all liquidity"}
             </button>
             <button
               type="button"
               onClick={rugWithout}
-              disabled={rugged}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-rose-500/30 px-5 text-[13px] text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-30"
+              disabled={rugged || busy}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-rose-500/30 px-5 text-[13px] text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-40"
             >
-              Replay without Latch
+              {pending === "without" ? <Refresh size={15} className="animate-spin" /> : null}
+              {pending === "without" ? "Draining pool…" : "Replay without Latch"}
             </button>
             <button
               type="button"
@@ -224,7 +251,23 @@ export function RugSimulator() {
             </button>
           </div>
 
-          {event === "blocked" ? (
+          {pending ? (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-white/12 bg-white/[0.03] p-4">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/80">
+                <Refresh size={13} className="animate-spin" />
+              </span>
+              <div>
+                <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-white/70">
+                  {pending === "rug" ? "Submitting removal to the pool…" : "Draining the pool…"}
+                </p>
+                <p className="mt-1 font-mono text-[12px] text-white/50">
+                  {pending === "rug"
+                    ? "beforeRemoveLiquidity is about to run"
+                    : "no hook in this pool — nothing to stop it"}
+                </p>
+              </div>
+            </div>
+          ) : event === "blocked" ? (
             <div className="mt-5 flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
                 <Tick size={13} />
