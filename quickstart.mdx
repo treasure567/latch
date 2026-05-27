@@ -30,7 +30,7 @@ cast call 0x6C72e2f113eC4680565388345793f6478D1083e2 \
 It **reverts** — and the revert is the point. v4 wraps the hook's reason as `WrappedError(LatchHook, beforeRemoveLiquidity, RugBlocked(requested, alreadyRemoved, released))`, where `released` is `0` because the demo pool's cliff is far in the future. The liquidity cannot move.
 
 <Tip>
-  `RugDemo` ([`0x6C72e2f113eC4680565388345793f6478D1083e2`](https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2)) is the same contract behind the "try it onchain" panel on the Latch site. Send the call as a real transaction instead and it is mined as a failed rug, permanently on the explorer.
+  `RugDemo` ([`0x6C72e2f113eC4680565388345793f6478D1083e2`](https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2)) is the same contract behind the "try it onchain" panel on the [Latch app](https://latch-eta.vercel.app/). Send the call as a real transaction instead and it is mined as a failed rug, permanently on the explorer.
 </Tip>
 
 ## Verify a pool

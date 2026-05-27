@@ -71,14 +71,18 @@
   "navbar": {
     "links": [
       {
+        "label": "GitHub",
+        "href": "https://github.com/treasure567/latch"
+      },
+      {
         "label": "X Layer Explorer",
         "href": "https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "GitHub",
-      "href": "https://github.com/treasure567/latch"
+      "label": "Try it live",
+      "href": "https://latch-eta.vercel.app/"
     }
   },
   "footer": {
