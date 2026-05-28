@@ -67,6 +67,30 @@ function setSchedule(
 
 The cumulative `removedSoFar[id]` accounting means removals across many transactions are summed against the released amount — you cannot drain the pool with a series of small pulls.
 
+### Flow of a removal
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as Position owner / RugAttempt
+  participant PM as v4 PoolManager
+  participant H as LatchHook
+  U->>PM: modifyLiquidity(key, -amount)
+  PM->>H: beforeRemoveLiquidity(key, params)
+  Note over H: released = releasedAmount(now)<br/>already = removedSoFar[id]
+  alt already + amount > released
+    H-->>PM: revert RugBlocked(requested, already, released)
+    PM-->>U: tx reverts (WrappedError wraps RugBlocked)
+  else within schedule
+    H->>H: removedSoFar[id] += amount
+    H-->>PM: ok
+    PM->>U: liquidity removed
+    H-->>U: emit LiquidityReleased(poolId, amount, cumulative, released)
+  end
+```
+
+The gate fires regardless of *who* called `modifyLiquidity`, and before any position state changes — so a stranger calling against an empty position still reverts at the hook, not at the position check.
+
 ## A blocked rug is a failed transaction
 
 <Warning>

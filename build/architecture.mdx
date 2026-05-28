@@ -20,6 +20,63 @@ Latch is **onchain-first**. Every guarantee is enforced in the hook; nothing off
   </Card>
 </CardGroup>
 
+## System diagram
+
+Writes (launch, swap, attempted removal) go straight from the user's wallet to the contracts on X Layer mainnet. The backend only reads — it indexes logs and failed transactions and serves them through a read-only API.
+
+```mermaid
+flowchart LR
+  User([Buyer or Creator])
+  Wallet[OKX Wallet]
+  FE["Frontend<br/>Next.js · wagmi · viem"]
+  API[Read-only API<br/>Fastify]
+  Idx[Indexer]
+  DB[("Postgres<br/>+ Redis")]
+
+  subgraph Chain["X Layer mainnet (chainId 196)"]
+    direction TB
+    Lau[LatchLauncher]
+    PM[Uniswap v4 PoolManager]
+    Hook[LatchHook]
+    Reg[LatchRegistry]
+  end
+
+  User --> FE
+  User --> Wallet
+  Wallet ==>|"write tx (launch / swap / remove)"| Lau
+  Wallet ==>|write tx| PM
+  FE -->|"verify (eth_call)"| Reg
+  FE -->|reads| API
+  Idx -->|"logs + failed RugBlocked txs"| Chain
+  Idx --> DB
+  API --> DB
+  Lau --> PM
+  Lau --> Reg
+  Lau --> Hook
+  PM -->|beforeRemoveLiquidity| Hook
+
+  classDef chainNode fill:#0a0a0c,stroke:#34d399,color:#fff
+  classDef offchain fill:#0a0a0c,stroke:#444,color:#ddd
+  class Lau,PM,Hook,Reg chainNode
+  class FE,API,Idx,DB offchain
+```
+
+<Tip>
+  The double arrows are the write paths in the trust boundary. Everything off-chain only reads.
+</Tip>
+
+## Technology stack
+
+| Layer | Technology |
+| --- | --- |
+| Contracts | Solidity 0.8.26 · Foundry · `uniswap-hooks` · v4-core/periphery · OpenZeppelin |
+| Address mining | `HookMiner` + CREATE2 (encodes `BEFORE_REMOVE_LIQUIDITY_FLAG`) |
+| Chain | X Layer mainnet (zkEVM, Polygon CDK, OKB gas) |
+| Frontend | Next.js 16 (App Router) · React 19 · Tailwind v4 · viem 2 |
+| Indexer | Subscribes to `PoolLaunched`, `PoolVerified`, `LiquidityReleased`, and failed `RugBlocked` transactions |
+| Storage | Postgres (pools, schedules, event log) · Redis (cache + pub/sub) |
+| API | Fastify · read-only |
+
 ## Backend: read-only indexer
 
 The backend subscribes to X Layer logs and decodes them into a queryable store. It is read-only by construction.

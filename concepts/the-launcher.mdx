@@ -37,6 +37,32 @@ It returns `(PoolId id, address token)` and emits `PoolLaunched(poolId, token, c
   Because everything happens in one call, a launched pool is locked from the very first block it exists — there is no window where the pool is live but unprotected.
 </Note>
 
+### Atomic launch sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Creator
+  participant L as LatchLauncher
+  participant T as DemoToken
+  participant PM as v4 PoolManager
+  participant H as LatchHook
+  participant R as LatchRegistry
+  Creator->>L: launch(LaunchParams)
+  L->>T: new DemoToken(name, symbol, supply, launcher)
+  L->>L: pull quoteFunding from creator
+  L->>PM: initialize(key, sqrtPriceX96)
+  L->>PM: unlock(callback data)
+  PM->>L: unlockCallback(data)
+  L->>PM: modifyLiquidity(+L)
+  L->>L: settle currency0/1 from launcher balance
+  L->>H: setSchedule(key, cliff, periodLength, periodsCount, totalLocked)
+  L->>R: register(id, hook, creator, schedule, token0, token1)
+  L-->>Creator: PoolLaunched(poolId, token, creator, L)
+```
+
+Every step lives inside the same transaction. If any one of them reverts, the whole launch reverts — the token is not deployed, the pool is not initialized, the schedule is not written. The atomicity is what makes the **Verified** status meaningful from block one.
+
 ## The v4 unlock pattern
 
 The launcher needs to move funds through the `PoolManager`, which uses v4's unlock/callback pattern. `LatchLauncher` implements `unlockCallback` for this purpose.
