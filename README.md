@@ -183,6 +183,7 @@ A blocked rug is a **failed transaction**, not a log event (a revert rolls back 
 |---|---|
 | **Live app** | https://latch-eta.vercel.app |
 | **Docs** | https://latch-7241ffdc.mintlify.app |
+| **X / Twitter** | [@xdev_hack](https://x.com/xdev_hack) |
 | **Hook on explorer** | https://www.oklink.com/xlayer/address/0xf856b2992612d55874cE2f8fB2cAb1B3a5Bf8200 |
 | **Demo pool on explorer** | https://www.oklink.com/xlayer/address/0x6C72e2f113eC4680565388345793f6478D1083e2 |
 
