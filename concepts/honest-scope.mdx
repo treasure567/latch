@@ -6,7 +6,7 @@ description: "A liquidity lock closes exactly one rug vector — the hard liquid
 Latch is precise about what it guarantees. A liquidity lock closes exactly **one** rug vector: the hard liquidity pull. This candor is a feature — overclaiming is how buyers get hurt.
 
 <Warning>
-  Latch does not claim to be foolproof. On its own, the lock does not stop a supply dump, a malicious token, a second unprotected pool, or the inherent risk of unaudited hackathon code. Read this page before you treat "locked" as "safe."
+  Latch does not claim to be foolproof. On its own, the lock does not stop a supply dump, a malicious token, or a second unprotected pool. Read this page before you treat "locked" as "safe."
 </Warning>
 
 ## What the lock does not stop on its own
@@ -26,9 +26,6 @@ Latch is precise about what it guarantees. A liquidity lock closes exactly **one
     A creator can seed a separate pool with no Latch hook and dump there.
 
     **Answer:** the registry. Buy through the verified pool, and confirm `isVerified` before you trade. A lock on pool A says nothing about pool B — verification is what ties your buy to the protected pool.
-  </Accordion>
-  <Accordion title="Unaudited hackathon code" icon="triangle-exclamation">
-    Latch was built during a hackathon and is **not audited**. The contracts are deployed and verified on X Layer and covered by a Foundry test suite, but that is not a substitute for a formal audit.
   </Accordion>
 </AccordionGroup>
 
